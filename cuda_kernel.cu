@@ -5,21 +5,25 @@
 __global__ void MatrixTransformKernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int K)
 {
     // Get thread ID.
-    int f = blockDim.x * blockIdx.x + threadIdx.x;
+    long f = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (f < N * in_M * K)
     {
-        int i = f / (in_M * K);
-        int j = (f % (in_M * K)) / K;
-        int k = (f % (in_M * K)) % K;
+        long i = f / (in_M * K);
+        long j = (f % (in_M * K)) / K;
+        long k = (f % (in_M * K)) % K;
         out_matrix[i * out_M * K + (k + (j / K) * K) * K + j % K]
             = in_matrix[i * in_M * K + j * K + k];
     }
 }
 
 
-void kernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int K)
+void kernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int K, float* elapsedTime)
 {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, 0);
     // Initialize device pointers.
     float* d_In, * d_Out;
 
@@ -33,7 +37,7 @@ void kernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int
 
     // Calculate blocksize and gridsize.
     dim3 threadsPerBlock(1024);
-    int s = N * out_M * K / threadsPerBlock.x;
+    long s = N * out_M * K / threadsPerBlock.x + 1;
     s = s == 0 ? 1 : s;
     dim3 numBlocks(s);
 
@@ -42,6 +46,9 @@ void kernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int
 
     // Copy result array c back to host memory.
     cudaMemcpy(out_matrix, d_Out, N * out_M * K * sizeof(float), cudaMemcpyDeviceToHost);
-    //cudaFree(d_In);
-    //cudaFree(d_Out);
+    cudaFree(d_In);
+    cudaFree(d_Out);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(elapsedTime, start, stop);
 }
