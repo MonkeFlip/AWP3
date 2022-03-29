@@ -11,7 +11,7 @@ bool CompareMatrices(float* matrix1, float* matrix2, long size);
 
 //const int N = 1;
 const int M = 4;
-const int in_matrix_N = 9000;
+const int in_matrix_N = 7000;
 const int in_matrix_M = 10000;
 const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matrix_M % 4));
 
