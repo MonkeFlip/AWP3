@@ -13,7 +13,6 @@ float* CPUimplementation();
 float* GPUimplementation_globalMemory();
 float* GPUimplementation_pinnedMemory();
 
-//const int N = 1;
 const int M = 4;
 const int in_matrix_N = 7000;
 const int in_matrix_M = 10000;
@@ -21,10 +20,10 @@ const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matri
 
 int main()
 {
-    float* gpu_matrix = GPUimplementation_pinnedMemory();
-    float* cpu_matrix = GPUimplementation_globalMemory();
+    float* matrix1 = GPUimplementation_pinnedMemory();
+    float* matrix2 = GPUimplementation_globalMemory();
 
-    if (CompareMatrices(cpu_matrix, gpu_matrix, in_matrix_N * out_matrix_M * M))
+    if (CompareMatrices(matrix1, matrix2, in_matrix_N * out_matrix_M * M))
     {
         std::cout << "Matrices are equal." << std::endl;
     }
@@ -33,8 +32,7 @@ int main()
         std::cout << "Matrices are not equal." << std::endl;
     }
 
-    delete[] cpu_matrix;
-    //delete[] gpu_matrix;
+    delete[] matrix2;
 }
 
 float* GPUimplementation_pinnedMemory()
@@ -56,7 +54,7 @@ float* GPUimplementation_pinnedMemory()
     float time = 0;
     float* GPU_elapsedTime = &time;
     kernel(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
-    std::cout << "GPU implementation time: " << time / 1000 << " seconds." << std::endl;
+    std::cout << "GPU with pinned memory implementation time: " << time / 1000 << " seconds." << std::endl;
 
     cudaFreeHost(input_matrix);
 
@@ -79,7 +77,7 @@ float* GPUimplementation_globalMemory()
     float time = 0;
     float* GPU_elapsedTime = &time;
     kernel(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
-    std::cout << "GPU implementation time: " << time / 1000 << " seconds." << std::endl;
+    std::cout << "GPU with global memory implementation time: " << time / 1000 << " seconds." << std::endl;
 
     delete[] input_matrix;
     return output_matrix;
@@ -106,7 +104,6 @@ float* CPUimplementation()
     duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
     std::cout << "CPU implementation time: " << time_span.count() << " seconds." << std::endl;
 
-    //delete[] input_matrix;
     return output_matrix;
 }
 
@@ -117,8 +114,6 @@ void TransformMatrixCPU(float* input_matrix, float* output_matrix)
         long i = f / (in_matrix_M * M);
         long j = (f % (in_matrix_M * M)) / M;
         long k = (f % (in_matrix_M * M)) % M;
-        //std::cout << "f: " << f << " i: " << i << " j: " << j << " k: " << k << std::endl;
-        //std::cout << i * out_matrix_M * M + (k + (j / M) * M) * M + j % M<<"  "<< i * in_matrix_M * M + j * M + k << std::endl;
         output_matrix[i * out_matrix_M * M + (k + (j / M) * M) * M + j % M]
             = input_matrix[i * in_matrix_M * M + j * M + k];
     }
