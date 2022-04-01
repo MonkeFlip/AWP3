@@ -2,6 +2,7 @@
 #include <iostream>
 #include "./cuda_kernel.cuh"
 
+
 __global__ void MatrixTransformKernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int K)
 {
     long f = blockDim.x * blockIdx.x + threadIdx.x;
@@ -16,6 +17,7 @@ __global__ void MatrixTransformKernel(float* in_matrix, float* out_matrix, int N
     }
 }
 
+
 void kernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int K, float* elapsedTime)
 {
     cudaEvent_t start, stop;
@@ -29,6 +31,32 @@ void kernel(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int
 
     cudaMemcpy(d_In, in_matrix, N * in_M * K * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_Out, out_matrix, N * out_M * K * sizeof(float), cudaMemcpyHostToDevice);
+
+    dim3 threadsPerBlock(1024);
+    long s = N * out_M * K / threadsPerBlock.x + 1;
+    s = s == 0 ? 1 : s;
+    dim3 numBlocks(s);
+
+    MatrixTransformKernel << <numBlocks, threadsPerBlock >> > (d_In, d_Out, N, in_M, out_M, K);
+
+    cudaMemcpy(out_matrix, d_Out, N * out_M * K * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaFree(d_In);
+    cudaFree(d_Out);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(elapsedTime, start, stop);
+}
+
+void kernel_PinnedMemory(float* in_matrix, float* out_matrix, int N, int in_M, int out_M, int K, float* elapsedTime)
+{
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, 0);
+    float* d_In, * d_Out;
+
+    d_In = in_matrix;
+    d_Out = out_matrix;
 
     dim3 threadsPerBlock(1024);
     long s = N * out_M * K / threadsPerBlock.x + 1;

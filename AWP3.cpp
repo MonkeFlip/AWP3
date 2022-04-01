@@ -21,7 +21,7 @@ const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matri
 int main()
 {
     float* matrix1 = GPUimplementation_pinnedMemory();
-    float* matrix2 = GPUimplementation_globalMemory();
+    float* matrix2 = CPUimplementation();
 
     if (CompareMatrices(matrix1, matrix2, in_matrix_N * out_matrix_M * M))
     {
@@ -53,7 +53,7 @@ float* GPUimplementation_pinnedMemory()
     ClearMatrix(output_matrix, in_matrix_N, out_matrix_M, M);
     float time = 0;
     float* GPU_elapsedTime = &time;
-    kernel(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
+    kernel_PinnedMemory(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
     std::cout << "GPU with pinned memory implementation time: " << time / 1000 << " seconds." << std::endl;
 
     cudaFreeHost(input_matrix);
