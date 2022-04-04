@@ -11,17 +11,18 @@ void ClearMatrix(float* matrix, long n, long m, long k);
 bool CompareMatrices(float* matrix1, float* matrix2, long size);
 float* CPUimplementation();
 float* GPUimplementation_globalMemory();
+float* GPUimplementation_sharedMemory();
 float* GPUimplementation_pinnedMemory();
 
 const int M = 4;
-const int in_matrix_N = 7000;
-const int in_matrix_M = 10000;
+const int in_matrix_N = 10000;
+const int in_matrix_M = 11000;
 const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matrix_M % 4));
 
 int main()
 {
-    float* matrix1 = GPUimplementation_pinnedMemory();
-    float* matrix2 = CPUimplementation();
+    float* matrix1 = GPUimplementation_globalMemory();
+    float* matrix2 = GPUimplementation_pinnedMemory();
 
     if (CompareMatrices(matrix1, matrix2, in_matrix_N * out_matrix_M * M))
     {
@@ -32,7 +33,6 @@ int main()
         std::cout << "Matrices are not equal." << std::endl;
     }
 
-    delete[] matrix2;
 }
 
 float* GPUimplementation_pinnedMemory()
@@ -83,6 +83,28 @@ float* GPUimplementation_globalMemory()
     return output_matrix;
 }
 
+float* GPUimplementation_sharedMemory()
+{
+    float* input_matrix = new float[in_matrix_N * in_matrix_M * M];
+    float* output_matrix = new float[in_matrix_M * out_matrix_M * M];
+
+    long counter = 0;
+    for (long i = 0; i < in_matrix_N * in_matrix_M * M; i++)
+    {
+        input_matrix[i] = i;
+    }
+    ///change this
+
+    ClearMatrix(output_matrix, in_matrix_N, out_matrix_M, M);
+    float time = 0;
+    float* GPU_elapsedTime = &time;
+    kernel_SharedMemory(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
+    std::cout << "GPU with shared memory implementation time: " << time / 1000 << " seconds." << std::endl;
+
+    delete[] input_matrix;
+    return output_matrix;
+}
+
 float* CPUimplementation()
 {
     using namespace std::chrono;
@@ -115,7 +137,7 @@ void TransformMatrixCPU(float* input_matrix, float* output_matrix)
         long j = (f % (in_matrix_M * M)) / M;
         long k = (f % (in_matrix_M * M)) % M;
         output_matrix[i * out_matrix_M * M + (k + (j / M) * M) * M + j % M]
-            = input_matrix[i * in_matrix_M * M + j * M + k];
+            = input_matrix[f];
     }
 }
 
