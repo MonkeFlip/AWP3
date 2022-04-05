@@ -15,14 +15,14 @@ float* GPUimplementation_sharedMemory();
 float* GPUimplementation_pinnedMemory();
 
 const int M = 4;
-const int in_matrix_N = 10000;
-const int in_matrix_M = 11000;
+const int in_matrix_N = 9000;
+const int in_matrix_M = 10000;
 const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matrix_M % 4));
 
 int main()
 {
     float* matrix1 = GPUimplementation_globalMemory();
-    float* matrix2 = GPUimplementation_pinnedMemory();
+    float* matrix2 = GPUimplementation_sharedMemory();
 
     if (CompareMatrices(matrix1, matrix2, in_matrix_N * out_matrix_M * M))
     {
