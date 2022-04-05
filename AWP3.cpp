@@ -9,20 +9,28 @@ void PrintMatrix(float* matrix, long matrix_N, long matrix_M, long M);
 void TransformMatrixCPU(float* input_matrix, float* output_matrix);
 void ClearMatrix(float* matrix, long n, long m, long k);
 bool CompareMatrices(float* matrix1, float* matrix2, long size);
-float* CPUimplementation();
-float* GPUimplementation_globalMemory();
-float* GPUimplementation_sharedMemory();
-float* GPUimplementation_pinnedMemory();
+float* CPUimplementation(float* input_matrix, float* output_matrix);
+float* GPUimplementation_globalMemory(float* input_matrix, float* output_matrix);
+float* GPUimplementation_sharedMemory(float* input_matrix, float* output_matrix);
+float* GPUimplementation_pinnedMemory(float* input_matrix, float* output_matrix);
 
 const int M = 4;
-const int in_matrix_N = 9000;
-const int in_matrix_M = 10000;
+const int in_matrix_N = 80;
+const int in_matrix_M = 90;
 const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matrix_M % 4));
 
 int main()
 {
-    float* matrix1 = GPUimplementation_globalMemory();
-    float* matrix2 = GPUimplementation_sharedMemory();
+    float* input_matrix = new float[in_matrix_N * in_matrix_M * M];
+    float* output_matrix1 = new float[in_matrix_M * out_matrix_M * M];
+    float* output_matrix2 = new float[in_matrix_M * out_matrix_M * M];
+    for (long i = 0; i < in_matrix_N * in_matrix_M * M; i++)
+    {
+        input_matrix[i] = rand();
+    }
+
+    float* matrix1 = CPUimplementation(input_matrix, output_matrix1);
+    float* matrix2 = GPUimplementation_sharedMemory(input_matrix, output_matrix2);
 
     if (CompareMatrices(matrix1, matrix2, in_matrix_N * out_matrix_M * M))
     {
@@ -33,22 +41,15 @@ int main()
         std::cout << "Matrices are not equal." << std::endl;
     }
 
+    delete[] input_matrix;
+    delete[] output_matrix1;
+    delete[] output_matrix2;
 }
 
-float* GPUimplementation_pinnedMemory()
+float* GPUimplementation_pinnedMemory(float* input_matrix, float* output_matrix)
 {
-    float* input_matrix;
-    float* output_matrix;
-
-    cudaMallocHost(&input_matrix, in_matrix_N * in_matrix_M * M * sizeof(float));
-    cudaMallocHost(&output_matrix, in_matrix_M * out_matrix_M * M * sizeof(float));
-
-    long counter = 0;
-    for (long i = 0; i < in_matrix_N * in_matrix_M * M; i++)
-    {
-        input_matrix[i] = i;
-    }
-    ///change this
+    cudaHostRegister(input_matrix, in_matrix_N * in_matrix_M * M * sizeof(float), cudaHostRegisterMapped);
+    cudaHostRegister(output_matrix, in_matrix_M * out_matrix_M * M * sizeof(float), cudaHostRegisterMapped);
 
     ClearMatrix(output_matrix, in_matrix_N, out_matrix_M, M);
     float time = 0;
@@ -56,68 +57,34 @@ float* GPUimplementation_pinnedMemory()
     kernel_PinnedMemory(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
     std::cout << "GPU with pinned memory implementation time: " << time / 1000 << " seconds." << std::endl;
 
-    cudaFreeHost(input_matrix);
-
     return output_matrix;
 }
 
-float* GPUimplementation_globalMemory()
+float* GPUimplementation_globalMemory(float* input_matrix, float* output_matrix)
 {
-    float* input_matrix = new float[in_matrix_N * in_matrix_M * M];
-    float* output_matrix = new float[in_matrix_M * out_matrix_M * M];
-
-    long counter = 0;
-    for (long i = 0; i < in_matrix_N * in_matrix_M * M; i++)
-    {
-        input_matrix[i] = i;
-    }
-    ///change this
-
     ClearMatrix(output_matrix, in_matrix_N, out_matrix_M, M);
     float time = 0;
     float* GPU_elapsedTime = &time;
     kernel(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
     std::cout << "GPU with global memory implementation time: " << time / 1000 << " seconds." << std::endl;
 
-    delete[] input_matrix;
     return output_matrix;
 }
 
-float* GPUimplementation_sharedMemory()
+float* GPUimplementation_sharedMemory(float* input_matrix, float* output_matrix)
 {
-    float* input_matrix = new float[in_matrix_N * in_matrix_M * M];
-    float* output_matrix = new float[in_matrix_M * out_matrix_M * M];
-
-    long counter = 0;
-    for (long i = 0; i < in_matrix_N * in_matrix_M * M; i++)
-    {
-        input_matrix[i] = i;
-    }
-    ///change this
-
     ClearMatrix(output_matrix, in_matrix_N, out_matrix_M, M);
     float time = 0;
     float* GPU_elapsedTime = &time;
     kernel_SharedMemory(input_matrix, output_matrix, in_matrix_N, in_matrix_M, out_matrix_M, M, GPU_elapsedTime);
     std::cout << "GPU with shared memory implementation time: " << time / 1000 << " seconds." << std::endl;
 
-    delete[] input_matrix;
     return output_matrix;
 }
 
-float* CPUimplementation()
+float* CPUimplementation(float* input_matrix, float* output_matrix)
 {
     using namespace std::chrono;
-    float* input_matrix = new float [in_matrix_N * in_matrix_M * M];
-    float* output_matrix = new float [in_matrix_M * out_matrix_M * M];
-
-    ///change this
-    long counter = 0;
-    for (long i = 0; i < in_matrix_N * in_matrix_M * M; i++)
-    {
-        input_matrix[i] = i;
-    }
-    ///change this
 
     ClearMatrix(output_matrix, in_matrix_N, out_matrix_M, M);
     high_resolution_clock::time_point t1 = high_resolution_clock::now();

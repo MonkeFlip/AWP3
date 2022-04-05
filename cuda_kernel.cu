@@ -101,8 +101,8 @@ void kernel_PinnedMemory(float* in_matrix, float* out_matrix, int N, int in_M, i
     cudaEventCreate(&stop);
     float* d_In, * d_Out;
 
-    d_In = in_matrix;
-    d_Out = out_matrix;
+    cudaHostGetDevicePointer(&d_In, in_matrix, 0);
+    cudaHostGetDevicePointer(&d_Out, out_matrix, 0);
 
     dim3 threadsPerBlock(1024);
     long s = N * out_M * K / threadsPerBlock.x + 1;
