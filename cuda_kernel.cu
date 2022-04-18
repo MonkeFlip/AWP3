@@ -12,8 +12,25 @@ __global__ void MatrixTransformKernel(float* in_matrix, float* out_matrix, int N
         long i = f / (in_M * K);
         long j = (f % (in_M * K)) / K;
         long k = (f % (in_M * K)) % K;
-        out_matrix[i * out_M * K + (k + (j / K) * K) * K + j % K]
-            = in_matrix[f];
+        int new_i = i % 2 == 0 ? i + 1 : i - 1;
+        int new_k = k;
+        if (k % 4 == 0 && 0 < new_i * out_M * K + j * K + new_k && new_i * out_M * K + j * K + new_k < N * out_M * K && j + k != 0)
+        {
+            new_k = k - 1;            
+        }
+        else if ((k + 1) % 4 == 0 && 0 < new_i * out_M * K + j * K + new_k && new_i * out_M * K + j * K + new_k < N * out_M * K && (j + 1) * K + k != out_M * K + K - 1)
+        {
+            new_k = k + 1;            
+        }
+        
+        if (i % 2 == 1)
+        {
+            out_matrix[f] = in_matrix[(i - 1) * in_M * K + j * K + new_k];
+        }
+        else
+        {
+            out_matrix[f] = in_matrix[(i + 1) * in_M * K + j * K + new_k];
+        }
     }
 }
 
@@ -24,16 +41,34 @@ __global__ void SharedMemoryMatrixTransformKernel(float* in_matrix, float* out_m
     if (f < N * in_M * K)
     {
         __shared__ float smem[1024];
-        
+
         long i = f / (in_M * K);
         long j = (f % (in_M * K)) / K;
         long k = (f % (in_M * K)) % K;
+        int new_i = i % 2 == 0 ? i + 1 : i - 1;
+        int new_k = k;
 
-        smem[threadIdx.x] = in_matrix[blockIdx.x * 1024 + threadIdx.x];
+        if (k % 4 == 0 && 0 < new_i * out_M * K + j * K + new_k && new_i * out_M * K + j * K + new_k < N * out_M * K && j + k != 0)
+        {
+            new_k = k - 1;
+        }
+        else if ((k + 1) % 4 == 0 && 0 < new_i * out_M * K + j * K + new_k && new_i * out_M * K + j * K + new_k < N * out_M * K && (j + 1) * K + k != out_M * K + K - 1)
+        {
+            new_k = k + 1;
+        }
+
+        if (i % 2 == 1)
+        {
+            smem[threadIdx.x] = in_matrix[(i - 1) * in_M * K + j * K + new_k];
+        }
+        else
+        {
+            smem[threadIdx.x] = in_matrix[(i + 1) * in_M * K + j * K + new_k];
+        }
         __syncthreads();
 
-        out_matrix[i * out_M * K + (k + (j / K) * K) * K + j % K]
-            = smem[threadIdx.x];
+
+        out_matrix[f] = smem[threadIdx.x];
     }
 }
 
