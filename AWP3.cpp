@@ -15,8 +15,8 @@ float* GPUimplementation_sharedMemory(float* input_matrix, float* output_matrix)
 float* GPUimplementation_pinnedMemory(float* input_matrix, float* output_matrix);
 
 const int M = 4;
-const int in_matrix_N = 80;
-const int in_matrix_M = 90;
+const int in_matrix_N = 6000;
+const int in_matrix_M = 8000;
 const int out_matrix_M = in_matrix_M + (in_matrix_M % 4 == 0 ? 0 : 4 - (in_matrix_M % 4));
 
 int main()
@@ -30,7 +30,7 @@ int main()
     }
 
     float* matrix1 = CPUimplementation(input_matrix, output_matrix1);
-    float* matrix2 = GPUimplementation_sharedMemory(input_matrix, output_matrix2);
+    float* matrix2 = GPUimplementation_globalMemory(input_matrix, output_matrix2);
 
     if (CompareMatrices(matrix1, matrix2, in_matrix_N * out_matrix_M * M))
     {
